@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>双人PK · 我是选手2</title>
+<style>
+  :root{
+    --bg:#0f0b26; --panel:rgba(255,255,255,.07); --line:rgba(255,255,255,.14);
+    --txt:#f4f1ff; --dim:rgba(244,241,255,.62); --red:#ff4d6d; --yellow:#ffc531;
+    --green:#3ddc97; --gold:#ffd166;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{
+    color:var(--txt);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:radial-gradient(700px 500px at 10% 0%,#2a1a5e 0%,transparent 60%),
+               radial-gradient(600px 500px at 100% 100%,#3b1f5c 0%,transparent 55%),
+               linear-gradient(160deg,var(--bg),#1b1040);
+    user-select:none;
+  }
+  .app{height:100dvh;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 14px calc(12px + env(safe-area-inset-bottom))}
+  .view{flex:1;display:none;flex-direction:column;min-height:0}
+  body[data-view="wait"] .view-wait{display:flex}
+  body[data-view="playing"] .view-play{display:flex}
+  body[data-view="result"] .view-result{display:flex}
+  body[data-view="error"] .view-error{display:flex}
+
+  .connbar{display:none;text-align:center;font-size:13px;padding:7px;border-radius:10px;margin-bottom:8px;background:rgba(255,77,109,.18);color:#ffb3c1}
+  .connbar.on{display:block}
+
+  /* 等待 */
+  .view-wait{align-items:center;justify-content:center;gap:18px;text-align:center;padding:20px}
+  .role{font-size:44px;font-weight:900;letter-spacing:3px;background:linear-gradient(90deg,#ffd166,#ff7ab8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--dim);line-height:1.9;margin:0}
+  .wait-dots{font-size:40px;animation:blink 1.6s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .kwrap{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:320px}
+  .kwrap span{font-size:13px;color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+
+  /* 比赛中 */
+  .pbar{display:flex;align-items:center;gap:8px;padding:6px 2px 8px;font-size:14px}
+  .who{font-weight:800;font-size:16px}
+  .mid{margin-left:auto;font-size:13px;color:var(--dim)}
+  .pclock{font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;min-width:50px;text-align:right}
+  .pclock.warn{color:var(--red)}
+  .pclock.hide{display:none}
+
+  .opp-bar{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:10px;font-size:13px}
+  .opp-bar .name{font-weight:700}
+  .opp-bar .prog{flex:1;height:8px;border-radius:999px;background:rgba(0,0,0,.3);overflow:hidden}
+  .opp-bar .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3ddc97,#7af0c0);border-radius:999px;transition:width .3s}
+  .opp-bar .fl{width:16px;height:16px}
+
+  .qcard{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;margin-top:8px}
+  .expr{display:flex;align-items:center;gap:8px;font-size:40px;font-weight:900;letter-spacing:1px;font-variant-numeric:tabular-nums}
+  .eq{color:var(--dim)}
+  .slot{min-width:70px;padding:2px 10px;border-radius:12px;border:2px dashed rgba(255,255,255,.3);color:var(--dim);text-align:center;font-weight:900}
+  .slot.filled{border-style:solid;border-color:var(--gold);color:var(--gold);background:rgba(255,209,102,.12)}
+  .cmp-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
+  .cmp-line{display:flex;align-items:center;justify-content:center;gap:10px;font-size:34px;font-weight:900}
+  .cmp-slot{min-width:58px;text-align:center}
+  .cmp-keys{display:flex;gap:10px;width:100%}
+  .cmp-keys button{flex:1;font-family:inherit;font-size:30px;font-weight:900;color:#fff;padding:12px 0;border:0;border-radius:16px;background:linear-gradient(135deg,#5b8cff,#8f6bff)}
+  .cmp-keys button:active{transform:scale(.97)}
+
+  .pad{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:8px;margin-top:10px;min-height:0}
+  .pad button{font-family:inherit;font-size:26px;font-weight:800;color:var(--txt);border:1px solid var(--line);background:rgba(255,255,255,.08);border-radius:16px;cursor:pointer}
+  .pad button:active{transform:scale(.95)}
+  .pad .fn{font-size:18px;color:var(--dim)}
+  .pad .ok{background:linear-gradient(135deg,#ff7ab8,#ff4d6d);border:0;font-size:20px;letter-spacing:1px}
+  .pad button:disabled{opacity:.4}
+  .mini{display:flex;gap:12px;align-items:center;justify-content:center;font-size:13px;color:var(--dim);padding:6px 0 2px}
+  .mini .g{display:flex;align-items:center;gap:4px}
+  .fl{width:18px;height:18px}
+  .fl.red{color:var(--red)} .fl.yellow{color:var(--yellow)}
+  .fl circle{fill:#ffde59} .fl.yellow circle{fill:#ff8c42}
+
+  /* 反馈 */
+  .flash{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:20;backdrop-filter:blur(3px)}
+  .flash.on{display:flex}
+  .flash.good{background:rgba(120,20,60,.55)}
+  .flash.bad{background:rgba(150,110,10,.55)}
+  .flash .flower-big{width:120px;height:120px;animation:burst .45s cubic-bezier(.2,1.6,.4,1)}
+  .flash .msg{font-size:32px;font-weight:900;letter-spacing:3px}
+  .flash .ans{font-size:19px;font-weight:700;color:#fff;background:rgba(0,0,0,.28);padding:8px 20px;border-radius:999px}
+  .flash .nextbtn{margin-top:4px;border:0;font-family:inherit;font-size:22px;font-weight:800;color:#fff;padding:14px 50px;border-radius:999px;cursor:pointer;background:linear-gradient(135deg,#6d5bff,#a56bff);box-shadow:0 12px 28px rgba(109,91,255,.45)}
+  .flash .nextbtn:active{transform:scale(.96)}
+  @keyframes burst{from{transform:scale(.2) rotate(-25deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+
+  /* 结果 */
+  .view-result{align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  .verdict{font-size:44px;font-weight:900;letter-spacing:3px;margin:0;background:linear-gradient(90deg,#ffd166,#ff7ab8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .verdict.cheer{background:linear-gradient(90deg,#7ad8ff,#8f9bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .rstat{font-size:16px;color:var(--dim);line-height:1.9}
+  .rstat b{color:var(--txt);font-size:20px}
+  .res-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;width:100%;max-width:360px;text-align:left;font-size:14px;line-height:1.9}
+  .res-box .row{display:flex;justify-content:space-between}
+  .res-box .row b{color:var(--txt)}
+  .tip{font-size:14px;color:var(--dim)}
+
+  /* 错误 */
+  .view-error{align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  .err-title{font-size:28px;font-weight:800;color:var(--red)}
+</style>
+</head>
+<body data-view="wait">
+<div class="connbar" id="connbar">正在连接主机…</div>
+<div class="app">
+
+  <!-- 等待 -->
+  <section class="view view-wait">
+    <div class="role">选手2</div>
+    <div class="wait-dots" id="waitDots">⏳</div>
+    <p class="sub" id="waitSub">正在连接主机，请稍候…</p>
+    <div class="kwrap" id="kwrap"></div>
+  </section>
+
+  <!-- 比赛中 -->
+  <section class="view view-play">
+    <header class="pbar">
+      <span class="who">我（选手2）</span>
+      <span class="mid" id="midInfo">已答对 0 题</span>
+      <span class="pclock" id="pclock">60</span>
+    </header>
+
+    <div class="opp-bar">
+      <span class="fl red"></span>
+      <span class="name">选手1（主机）</span>
+      <span class="prog"><i id="oppBarInner"></i></span>
+      <span class="fl yellow"></span>
+      <span id="oppStat">0 题</span>
+    </div>
+
+    <div class="qcard">
+      <div class="expr" id="expr">
+        <span id="exprText">1 + 1</span>
+        <span class="eq">=</span>
+        <span class="slot" id="slot">?</span>
+      </div>
+      <div class="cmp-wrap" id="cmpWrap" hidden>
+        <div class="cmp-line">
+          <span id="cmpL">1 + 1</span>
+          <span class="slot cmp-slot" id="slotCmp">?</span>
+          <span id="cmpR">1 + 1</span>
+        </div>
+        <div class="cmp-keys" id="cmpKeys">
+          <button data-op=">">＞</button><button data-op="<">＜</button><button data-op="=">＝</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pad" id="pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button class="fn" data-k="del">删除</button><button data-k="0">0</button><button class="ok" data-k="ok">提交</button>
+    </div>
+    <div class="mini" id="mini"></div>
+  </section>
+
+  <!-- 结果 -->
+  <section class="view view-result">
+    <div class="verdict" id="verdict">你真棒！</div>
+    <div class="rstat" id="rstat"></div>
+    <div class="res-box" id="resBox"></div>
+    <div class="tip" id="rtip">等待主机开始下一局…</div>
+  </section>
+
+  <!-- 错误 -->
+  <section class="view view-error">
+    <div class="err-title">连接失败</div>
+    <p class="sub" id="errSub"></p>
+  </section>
+</div>
+
+<div class="flash" id="flash">
+  <div id="flashIcon"></div>
+  <div class="msg" id="flashMsg"></div>
+  <div class="ans" id="flashAns"></div>
+  <button class="nextbtn" id="btnNext">下一题 ▶</button>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="shared.js"></script>
+<script src="player.js"></script>
+</body>
+</html>
